@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SafeSweep Documentation</title>
+<meta name="description" content="SafeSweep for Unreal Engine: find what is bloating your project and clean up unreferenced assets safely, with quarantine, restore and a play-session guard.">
+<link rel="icon" href="images/icon.png">
+<style>
+  :root {
+    --bg: #0d1015;
+    --panel: #151a21;
+    --panel-2: #1b212a;
+    --line: #2a313c;
+    --text: #e8ecf1;
+    --muted: #9aa4b2;
+    --accent: #3ddc97;
+    --accent-ink: #0b1a13;
+    --warn: #ffb35c;
+    --code: #1f2630;
+    --max: 860px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f7f8fa;
+      --panel: #ffffff;
+      --panel-2: #f0f2f5;
+      --line: #dde1e7;
+      --text: #1a1f26;
+      --muted: #5b6573;
+      --accent: #12a86a;
+      --accent-ink: #ffffff;
+      --warn: #b8640a;
+      --code: #eef1f4;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.65 "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  a { color: var(--accent); }
+  img { max-width: 100%; display: block; }
+  code { background: var(--code); padding: 1px 6px; border-radius: 5px; font: 0.9em/1.4 Consolas, "Cascadia Mono", monospace; }
+
+  .layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); max-width: 1180px; margin: 0 auto; }
+  nav.side {
+    position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
+    padding: 32px 20px; border-right: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); font-weight: 600; font-size: 19px; margin-bottom: 24px; }
+  .brand img { width: 36px; height: 36px; }
+  nav.side ol { list-style: none; margin: 0; padding: 0; }
+  nav.side li a { display: block; padding: 6px 10px; border-radius: 8px; color: var(--muted); text-decoration: none; font-size: 15px; }
+  nav.side li a:hover { background: var(--panel-2); color: var(--text); }
+
+  main { padding: 40px 48px 96px; max-width: calc(var(--max) + 96px); }
+  header.hero { padding-bottom: 28px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+  .hero h1 { font-size: 40px; line-height: 1.15; margin: 0 0 10px; letter-spacing: -0.5px; }
+  .hero p.lead { font-size: 19px; color: var(--muted); margin: 0 0 18px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; }
+  .badge { font-size: 13px; padding: 4px 10px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); }
+  .badge.on { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
+
+  section { padding-top: 36px; }
+  h2 { font-size: 27px; margin: 0 0 12px; letter-spacing: -0.2px; }
+  h3 { font-size: 19px; margin: 26px 0 8px; }
+  p, li { color: var(--text); }
+  .muted { color: var(--muted); }
+
+  figure { margin: 18px 0 22px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--panel); }
+  figcaption { font-size: 14px; color: var(--muted); padding: 10px 14px; border-top: 1px solid var(--line); }
+
+  .steps { counter-reset: step; list-style: none; padding: 0; }
+  .steps li { counter-increment: step; position: relative; padding: 2px 0 12px 44px; }
+  .steps li::before {
+    content: counter(step); position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 14px; display: grid; place-items: center;
+  }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 15px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+  .table-wrap table { margin: 0; }
+  .table-wrap tr:last-child td { border-bottom: 0; }
+
+  .note { border-left: 4px solid var(--accent); background: var(--panel); padding: 12px 16px; border-radius: 0 10px 10px 0; margin: 16px 0; }
+  .note.warn { border-left-color: var(--warn); }
+  .note strong { display: block; margin-bottom: 2px; }
+
+  details { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0 16px; margin: 10px 0; }
+  details summary { cursor: pointer; padding: 12px 0; font-weight: 600; }
+  details[open] summary { border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+  details > *:last-child { margin-bottom: 14px; }
+
+  .support { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
+  .support .mail { font-size: 18px; font-weight: 600; }
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+
+  @media (max-width: 900px) {
+    .layout { display: block; }
+    nav.side { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 16px; }
+    nav.side ol { display: flex; flex-wrap: wrap; gap: 4px; }
+    nav.side li a { padding: 4px 10px; font-size: 14px; }
+    .brand { margin-bottom: 10px; }
+    main { padding: 24px 16px 64px; }
+    .hero h1 { font-size: 30px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="side" aria-label="Contents">
+    <a class="brand" href="#top"><img src="images/icon.png" alt=""> SafeSweep</a>
+    <ol>
+      <li><a href="#quick-start">Quick start</a></li>
+      <li><a href="#window">The SafeSweep window</a></li>
+      <li><a href="#how">How assets are judged</a></li>
+      <li><a href="#quarantine">Quarantine and restore</a></li>
+      <li><a href="#guard">Play-session guard</a></li>
+      <li><a href="#settings">Settings</a></li>
+      <li><a href="#teams">Teams and source control</a></li>
+      <li><a href="#faq">FAQ</a></li>
+      <li><a href="#troubleshooting">Troubleshooting</a></li>
+      <li><a href="#support">Support</a></li>
+      <li><a href="#changelog">Changelog</a></li>
+    </ol>
+  </nav>
+
+  <main id="top">
+    <header class="hero">
+      <h1>Clean up your Unreal project without the fear of deleting something you need.</h1>
+      <p class="lead">SafeSweep shows what takes up space, tells you why every asset is kept, and moves what nothing uses into a quarantine you can restore at any time.</p>
+      <div class="badges">
+        <span class="badge on">Unreal Engine 5.5</span>
+        <span class="badge on">Unreal Engine 5.8</span>
+        <span class="badge">Windows</span>
+        <span class="badge">Editor only</span>
+        <span class="badge">English · 한국어</span>
+      </div>
+    </header>
+
+    <section id="quick-start">
+      <h2>Quick start</h2>
+      <ol class="steps">
+        <li>Enable the plugin under <strong>Edit &gt; Plugins &gt; SafeSweep</strong> and restart the editor.</li>
+        <li>Open <strong>Tools &gt; SafeSweep</strong>.</li>
+        <li>Click <strong>Scan project</strong>. A typical project of a few thousand assets scans in well under a second.</li>
+        <li>Review the result. Folders that are entirely unreferenced are highlighted; double-click any row to find it in the Content Browser.</li>
+        <li>Tick what you want gone and click <strong>Quarantine checked</strong>. Nothing is deleted.</li>
+        <li>Play your game in the editor. If it needs something you quarantined, SafeSweep tells you and offers to bring it back.</li>
+        <li>When you are confident, delete the quarantine folder from the Content Browser. That is the only step that deletes anything, and it is yours.</li>
+      </ol>
+      <figure>
+        <img src="images/01_cover.png" alt="SafeSweep folder view with the restore menu and a play-session warning" loading="lazy">
+        <figcaption>Scan, quarantine, verify while you play, restore.</figcaption>
+      </figure>
+    </section>
+
+    <section id="window">
+      <h2>The SafeSweep window</h2>
+      <div class="table-wrap"><table>
+        <tr><th>Control</th><th>What it does</th></tr>
+        <tr><td><strong>Scan project</strong></td><td>Scans everything under <code>/Game</code> and refreshes the view.</td></tr>
+        <tr><td><strong>Quarantine checked</strong></td><td>Moves the checked assets into a new quarantine batch, after a confirmation.</td></tr>
+        <tr><td><strong>Restore</strong></td><td>Lists quarantine batches by time and contents. Restore one batch, in any order, or all of them.</td></tr>
+        <tr><td><strong>Show quarantine folder</strong></td><td>Opens the quarantine folder in the Content Browser.</td></tr>
+        <tr><td><strong>By folder / List</strong></td><td>Tree with totals per folder, or a flat list of every package. Click a column header to sort.</td></tr>
+        <tr><td><strong>Show only unreferenced</strong></td><td>Hides everything that is in use.</td></tr>
+        <tr><td><strong>English / 한국어</strong></td><td>Switches the language of the window. The choice is saved per user.</td></tr>
+      </table></div>
+      <p>The summary at the top shows the total size, how many packages are unreferenced, the largest asset types, and a <strong>Kept because</strong> line that counts how many packages are kept for each reason.</p>
+      <p>In the folder view, a folder's checkbox selects every unreferenced asset inside it. The <strong>Why</strong> column reads <em>Entire folder unreferenced</em>, <em>n of m unreferenced</em> or <em>All n in use</em>.</p>
+      <figure>
+        <img src="images/03_packs.png" alt="Folder view with an entirely unreferenced folder highlighted" loading="lazy">
+        <figcaption>Imported packs you barely use stand out in the folder view.</figcaption>
+      </figure>
+    </section>
+
+    <section id="how">
+      <h2>How assets are judged</h2>
+      <p>SafeSweep starts from everything that is known to be in use, then follows the Asset Registry's dependencies (hard, soft and Asset Manager references). Whatever is never reached is <strong>unreferenced</strong>. Every asset shows the reason it was kept, and hovering it shows the full path of the asset that keeps it.</p>
+      <div class="table-wrap"><table>
+        <tr><th>Reason in the Why column</th><th>Meaning</th></tr>
+        <tr><td>Loaded by the game during play</td><td>Listed in <em>Assets Needed At Runtime</em>, usually because the play-session guard saw the game load it.</td></tr>
+        <tr><td>Map</td><td>Every map is an entry point (can be turned off).</td></tr>
+        <tr><td>Primary asset</td><td>Known to the Asset Manager, including Primary Asset Labels.</td></tr>
+        <tr><td>Named in Config or C++ source</td><td>A <code>/Game/...</code> path appears in <code>Config/*.ini</code>, <code>Source/</code> or a project plugin. A folder path keeps the whole folder.</td></tr>
+        <tr><td>Path string in <em>asset</em></td><td>An asset that is in use contains this path as text: a string on a <em>Load Asset</em> node, a DataTable column, an actor property.</td></tr>
+        <tr><td>In an excluded folder</td><td>You excluded the folder in the settings.</td></tr>
+        <tr><td>Redirector</td><td>An ObjectRedirector. Never quarantined; use <em>Update Redirector References</em> instead.</td></tr>
+        <tr><td>Used by <em>asset</em> (outside /Game)</td><td>Referenced by plugin or engine content.</td></tr>
+        <tr><td>Used by <em>asset</em></td><td>Referenced by another asset that is in use.</td></tr>
+        <tr><td><strong>Unreferenced</strong></td><td>Nothing above applies.</td></tr>
+      </table></div>
+      <figure>
+        <img src="images/04_why.png" alt="List view sorted by the Why column" loading="lazy">
+        <figcaption>Sort by the Why column to group assets by the reason they are kept.</figcaption>
+      </figure>
+      <h3>Path strings inside assets</h3>
+      <p>Assets that are already in use (Blueprints, DataTables, maps and other non-binary assets) are searched for <code>/Game/...</code> strings. What they name is kept too, and the search repeats until nothing new turns up. Textures, meshes, sounds and similar heavy types are skipped. Assets that are themselves unreferenced are not searched, so a path in an unused Blueprint does not keep anything alive.</p>
+      <figure>
+        <img src="images/05_strings.png" alt="An asset kept because of a path string in a Blueprint" loading="lazy">
+        <figcaption>A mesh with no hard reference, kept because a Blueprint names it.</figcaption>
+      </figure>
+      <h3>World Partition and One File Per Actor</h3>
+      <p>Actors saved in their own files (<code>__ExternalActors__</code>, <code>__ExternalObjects__</code>) count as part of their map: whatever they reference or name is kept, and the Why column names the map. Those actor files and map build data (<code>*_BuiltData</code>) are never listed.</p>
+      <h3>What no scan can see</h3>
+      <p>A path assembled at runtime from smaller pieces, or read from a save file or a server, leaves no trace in the project. Full paths and folder paths are found; pieces are not. That is what the <a href="#guard">play-session guard</a> is for. Using soft references (<code>TSoftObjectPtr</code>, soft object path properties) instead of strings makes such loads visible to the editor, and to SafeSweep.</p>
+    </section>
+
+    <section id="quarantine">
+      <h2>Quarantine and restore</h2>
+      <p>Quarantining moves the checked assets to <code>/Game/_SafeSweepQuarantine/&lt;date_time&gt;/</code>, keeping their folder structure. SafeSweep uses Unreal's own rename, so references are fixed up exactly as with a move in the Content Browser. A record of every batch is kept in <code>Saved/SafeSweep/</code>.</p>
+      <figure>
+        <img src="images/07_restore.png" alt="Restore menu listing three quarantine batches" loading="lazy">
+        <figcaption>Restore any batch, in any order, or everything at once.</figcaption>
+      </figure>
+      <h3>What a restore does</h3>
+      <ul>
+        <li>Moves the batch's assets back to their original folders.</li>
+        <li>Also brings back any quarantined asset they depend on, even from another batch, so nothing restored is left pointing into the quarantine folder.</li>
+        <li>Skips an asset when something already exists at its original path (for example after a source control update), and tells you. The copy stays in quarantine for you to check.</li>
+        <li>Removes batch folders that end up empty.</li>
+      </ul>
+      <div class="note warn"><strong>Deleting the quarantine folder is permanent.</strong> Do it from the Content Browser once you have played and packaged your game. SafeSweep then forgets those assets on the next scan.</div>
+    </section>
+
+    <section id="guard">
+      <h2>Play-session guard</h2>
+      <p>While you play in the editor with something in quarantine, SafeSweep watches for the game trying to load a quarantined asset. Unreal reports every failed load, so it does not matter how the path was built.</p>
+      <ul>
+        <li>During play, a warning appears for each quarantined asset the game asked for.</li>
+        <li>After play, a notification lists them with <strong>Restore these assets</strong>, which brings back exactly those assets and what they depend on.</li>
+        <li>They are added to <strong>Assets Needed At Runtime</strong>, so later scans keep them.</li>
+      </ul>
+      <figure>
+        <img src="images/08_guard.png" alt="Play-session warnings in the editor" loading="lazy">
+        <figcaption>The warning during play, and the restore offer afterwards.</figcaption>
+      </figure>
+      <div class="note"><strong>Limits</strong>Loads that ask Unreal not to report failures (<code>LOAD_NoWarn</code> or <code>LOAD_Quiet</code>) are not seen, and standalone or packaged games are not watched. Play through the parts of your game that load content by path.</div>
+    </section>
+
+    <section id="settings">
+      <h2>Settings</h2>
+      <h3>Project Settings &gt; Plugins &gt; SafeSweep</h3>
+      <p class="muted">Saved in <code>Config/DefaultEditor.ini</code> and shared with your team.</p>
+      <div class="table-wrap"><table>
+        <tr><th>Setting</th><th>Default</th><th>Description</th></tr>
+        <tr><td>Excluded Folders</td><td><code>/Game/Developers</code>, <code>/Game/Collections</code></td><td>Never reported as unreferenced.</td></tr>
+        <tr><td>Treat All Maps As Roots</td><td>On</td><td>Every map counts as in use.</td></tr>
+        <tr><td>Scan Config And Source</td><td>On</td><td>Look for <code>/Game/...</code> paths in config and C++.</td></tr>
+        <tr><td>Scan Asset Strings</td><td>On</td><td>Look for path strings inside assets that are in use.</td></tr>
+        <tr><td>Assets Needed At Runtime</td><td>Empty</td><td>Package paths that are always kept. Filled by the play-session guard; remove an entry when the game no longer needs it.</td></tr>
+        <tr><td>Watch Play Sessions</td><td>On</td><td>Enable the play-session guard.</td></tr>
+        <tr><td>Quarantine Folder</td><td><code>/Game/_SafeSweepQuarantine</code></td><td>Where batches are created.</td></tr>
+      </table></div>
+      <figure>
+        <img src="images/10_settings.png" alt="SafeSweep project settings" loading="lazy">
+        <figcaption>Project settings.</figcaption>
+      </figure>
+      <h3>Editor Preferences &gt; Plugins &gt; SafeSweep</h3>
+      <p class="muted">Per user, not shared.</p>
+      <div class="table-wrap"><table>
+        <tr><th>Setting</th><th>Default</th><th>Description</th></tr>
+        <tr><td>Language</td><td>Auto</td><td>Auto follows the editor language. English or Korean otherwise. The switch in the window sets this too.</td></tr>
+      </table></div>
+    </section>
+
+    <section id="teams">
+      <h2>Teams and source control</h2>
+      <ul>
+        <li>Moves are regular Unreal renames, so with source control enabled you get the usual check-out prompts. Commit a quarantine batch like any other change.</li>
+        <li>Commit <code>Config/DefaultEditor.ini</code> so the whole team shares exclusions and the runtime list.</li>
+        <li>Quarantine records live in <code>Saved/SafeSweep/</code>, which is usually not under source control: restore from the machine that quarantined, or restore everything before committing.</li>
+        <li>If a teammate's update brings an asset back while its copy is still in quarantine, restoring skips it and reports it; delete the quarantined copy once you have checked.</li>
+      </ul>
+    </section>
+
+    <section id="faq">
+      <h2>FAQ</h2>
+      <details><summary>Does SafeSweep delete anything?</summary><p>No. It moves assets to a quarantine folder. Deleting that folder is your decision, made in the Content Browser.</p></details>
+      <details><summary>How is this different from the Reference Viewer?</summary><p>The Reference Viewer shows hard and soft references. SafeSweep also checks config, C++, path strings inside assets and World Partition actors, explains why each asset is kept, and adds quarantine, restore and the play-session guard.</p></details>
+      <details><summary>Does anything ship with my game?</summary><p>No. SafeSweep is an editor-only plugin.</p></details>
+      <details><summary>Can I trust "Unreferenced" blindly?</summary><p>No tool can see a path built at runtime from pieces. That is why nothing is deleted: quarantine, play the game, then decide.</p></details>
+      <details><summary>Why is a whole folder kept although I never use it?</summary><p>Look at the Why column of its assets. Common reasons: a map inside the folder (all maps count as in use), a folder path in a config file, or a path string in a Blueprint.</p></details>
+    </section>
+
+    <section id="troubleshooting">
+      <h2>Troubleshooting</h2>
+      <details><summary>Nothing shows as unreferenced</summary><p>Check the <strong>Kept because</strong> line at the top: it shows which reason keeps the packages. A broad folder path in config or C++ (for example a <em>DirectoriesToAlwaysCook</em> entry) keeps everything under it.</p></details>
+      <details><summary>A checkbox is greyed out</summary><p>Only unreferenced assets can be quarantined. Maps, redirectors and assets kept for any other reason cannot be checked.</p></details>
+      <details><summary>A restore reports skipped assets</summary><p>An asset already exists at the original path, usually after a source control update. The original is fine; delete the copy from the quarantine folder.</p></details>
+      <details><summary>Unreal shows a "Redirector Update Report"</summary><p>Unreal shows this when a move leaves a redirector that something still points at. It is safe to delete unreferenced redirectors there.</p></details>
+      <details><summary>The game needed an asset I quarantined</summary><p>Use <strong>Restore these assets</strong> on the notification after play, or the Restore menu. SafeSweep adds the asset to <em>Assets Needed At Runtime</em> so it is kept from then on.</p></details>
+    </section>
+
+    <section id="support">
+      <h2>Support</h2>
+      <div class="support">
+        <div>
+          <div class="mail"><a href="mailto:safesweep.support@gmail.com">safesweep.support@gmail.com</a></div>
+          <div class="muted">Usually answered within 2 business days. Please include your engine version and, for problems, the Output Log lines that start with <code>LogSafeSweep</code>.</div>
+        </div>
+      </div>
+      <p class="muted">No Discord account or login is needed to get help.</p>
+    </section>
+
+    <section id="changelog">
+      <h2>Changelog</h2>
+      <h3>1.0.0</h3>
+      <ul>
+        <li>First release for Unreal Engine 5.5 and 5.8.</li>
+      </ul>
+      <h3>Planned</h3>
+      <ul>
+        <li>Unreal Engine 5.6 and 5.7.</li>
+      </ul>
+    </section>
+
+    <footer>SafeSweep for Unreal Engine. Unreal and Unreal Engine are trademarks or registered trademarks of Epic Games, Inc.</footer>
+  </main>
+</div>
+</body>
+</html>
